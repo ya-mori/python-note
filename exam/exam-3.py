@@ -5,6 +5,7 @@ import sys
 sys.path.append("/Users/yohei.moriya/src/")
 import rakus_ml_training as rmt
 
+
 """
 演習問題3
 
@@ -18,12 +19,13 @@ def softmax(nd_x: pd.DataFrame)->np.ndarray:
     :param nd_x:
     :return:
     """
-    return np.exp(nd_x) / np.sum(np.exp(nd_x))
+    ans = np.exp(nd_x) / np.sum(np.exp(nd_x), axis=1).reshape((nd_x.shape[0], 1))
+    return ans
 
 
 def fit(vec_x, vec_w)->np.ndarray:
     """
-    線形回帰のモデルを組み立てて値を返します。
+    モデルを組み立てて値を返します。
 
     :param vec_x:
     :param vec_w:
@@ -33,8 +35,8 @@ def fit(vec_x, vec_w)->np.ndarray:
         print(f"vec_x : {vec_x.shape}, vec_w : {vec_w.shape}")
         raise Exception('引数が不正です。')
 
-    vec_y = vec_x.dot(vec_w.T)
-    return softmax(vec_y)
+    vec_z = vec_x.dot(vec_w.T)
+    return softmax(vec_z)
 
 
 def cal_error(vec_y, vec_t):
@@ -49,12 +51,9 @@ def cal_error(vec_y, vec_t):
         print(f"vec_y : {vec_y.shape} , vec_t : {vec_t.shape}")
         raise Exception('引数が不正です。')
 
-    vec_item_1 = vec_t * np.log(vec_y)
-    vec_item_2 = (1 - vec_t) * np.log(1 - vec_y)
-
-    # error = np.sqrt(np.mean(vec_item_1 + vec_item_2))
-    error = np.sum(vec_item_1 + vec_item_2)
-    return - error / vec_y.shape[0]
+    vec_item = vec_t * np.log(vec_y)
+    error = np.sum(vec_item, axis=1)
+    return np.mean(error)
 
 
 def cal_derror(vec_x, vec_w, vec_t):
@@ -72,8 +71,10 @@ def cal_derror(vec_x, vec_w, vec_t):
 
     vec_y = fit(vec_x, vec_w)
     nd_dev = vec_y - vec_t
+    # vec_dcost = nd_dev.T.dot(vec_x)
     vec_dcost = nd_dev.T.dot(vec_x)
-    nd_dcost = 2 * (np.array(vec_dcost)) / vec_y.shape[0]
+
+    nd_dcost = vec_dcost
     return nd_dcost
 
 
@@ -150,13 +151,10 @@ def do_cleansing(df_train, df_test):
 
     # 特徴量の２乗を計算
     # df_all_clean = pd.concat([df_all_clean, square(df_all_clean)], axis=1)
-    # df_all_clean = pd.concat([df_all_clean, square(df_all_clean)], axis=1)
-    # df_all_clean = pd.concat([df_all_clean, square(df_all_clean)], axis=1)
-    # df_all_clean = pd.concat([df_all_clean, square(df_all_clean)], axis=1)
     # print(df_all_clean.columns)
 
     # 特徴量の２乗と3乗を計算
-    df_all_clean = pd.concat([df_all_clean, square(df_all_clean), cube(df_all_clean)], axis=1)
+    # df_all_clean = pd.concat([df_all_clean, square(df_all_clean), cube(df_all_clean)], axis=1)
     # print(df_all_clean.columns)
 
     # 標準化
@@ -185,14 +183,13 @@ def run(df_train: pd.DataFrame, df_label: pd.DataFrame, count: int):
     if df_train.shape[0] != df_label.shape[0]:
         raise Exception('学習データとラベルデータの長さが一致していません。')
 
-    # nd_w = np.zeros((df_train.shape[1], df_label.shape[1]))
     nd_w = np.zeros((df_label.shape[1], df_train.shape[1]))
 
     for i in range(count):
-        nd_w = train(df_train.values, nd_w, df_label.values, 0.00001)
+        nd_w = train(df_train.values, nd_w, df_label.values, 0.01)
         h = fit(df_train.values, nd_w)
         error = cal_error(h, df_label.values)
-        print(f"{i} : {error}")
+        print(f"{i} : error {error}")
 
     return nd_w
 
@@ -206,9 +203,6 @@ if __name__ == '__main__':
     df_test = df_test_origin
     df_label = pd.get_dummies(df_train_origin['target'])
 
-    print(df_label.columns)
-    print(df_label.shape)
-
     df_train_clean, df_test_clean = do_cleansing(df_train, df_test)
 
     df_train_clean['bias'] = 1
@@ -218,12 +212,10 @@ if __name__ == '__main__':
 
     nd_result = fit(df_train_clean.values, nd_w)
     df_result = pd.DataFrame(data=nd_result)
-    df_result = df_result.idxmax(axis=1)
     print('train result')
-    rmt.iris.confirm(df_result, df_label.idxmax(axis=1))
+    rmt.iris.confirm(df_result.idxmax(axis=1), df_label.idxmax(axis=1))
 
     nd_result = fit(df_test_clean.values, nd_w)
-    # df_result = pd.DataFrame(data=nd_result, columns=['target'])
     df_result = pd.DataFrame(data=nd_result)
     print('test result')
     rmt.iris.confirm(df_result.idxmax(axis=1))

@@ -194,7 +194,7 @@ if __name__ == '__main__':
     df_train_clean['bias'] = 1
     df_test_clean['bias'] = 1
 
-    nd_w = run(df_train_clean, df_label, 1000)
+    nd_w = run(df_train_clean, df_label, 1)
 
     nd_result = fit(df_train_clean.values, nd_w)
     df_result = pd.DataFrame(data=nd_result, columns=['target'])
